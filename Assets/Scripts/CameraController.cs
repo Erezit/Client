@@ -36,10 +36,8 @@ public class CameraController : MonoBehaviour
         {
             Vector3 mouseWorldPos = cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
 
-            // Масштабируем камеру
             float newSize = Mathf.Clamp(cam.orthographicSize - scroll * zoomSpeed * Time.deltaTime, minZoom, maxZoom);
 
-            // Вычисляем смещение, чтобы точка под курсором осталась на месте
             Vector3 diff = mouseWorldPos - cam.transform.position;
             float sizeRatio = newSize / cam.orthographicSize;
             cam.transform.position += diff * (1 - sizeRatio);
