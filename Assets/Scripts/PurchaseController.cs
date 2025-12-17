@@ -59,7 +59,7 @@ public class PurchaseController : MonoBehaviour
                 if (!firstNode.HasValue)
                 {
                     firstNode = cc.nodeId;
-                    SetInfo($"Selected FROM: {firstNode}. Now pick TO node.");
+                    SetInfo($"Now pick TO node.");
                 }
                 else
                 {
@@ -88,8 +88,8 @@ public class PurchaseController : MonoBehaviour
     void UpdateInfo()
     {
         if (infoText == null) return;
-        if (inPurchaseMode) infoText.text = "Purchase mode: select FROM node";
-        else infoText.text = "Buy directed edge: click button";
+        if (inPurchaseMode) infoText.text = "select FROM node";
+        else infoText.text = "Buy directed edge";
     }
 
     void SetInfo(string s)
