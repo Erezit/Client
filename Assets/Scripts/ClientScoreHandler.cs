@@ -98,11 +98,22 @@ public class ClientScoreHandler : MonoBehaviour
     private List<GameObject> edgeObjects = new List<GameObject>(); // undirected edges
     private List<GameObject> directedEdgeObjects = new List<GameObject>();
 
+    public static System.Action<GameOverMessage> OnGameOver;
+
     void Awake()
     {
         NetworkClient.RegisterHandler<GraphMessage>(OnGraphMessage, false);
         NetworkClient.RegisterHandler<NodeUpdateMessage>(OnNodeUpdateMessage, false);
         NetworkClient.RegisterHandler<DirectedEdgeMessage>(OnDirectedEdgeMessage, false);
+        NetworkClient.RegisterHandler<GameOverMessage>(OnGameOverMessage, false);
+        
+        // Ensure GameOverUI exists
+        if (FindObjectOfType<GameOverUI>() == null)
+        {
+            GameObject uiObj = new GameObject("GameOverUIController");
+            uiObj.AddComponent<GameOverUI>();
+            Debug.Log("[ClientScoreHandler] Created GameOverUI automatically");
+        }
     }
 
     void OnDestroy()
@@ -110,6 +121,7 @@ public class ClientScoreHandler : MonoBehaviour
         NetworkClient.UnregisterHandler<GraphMessage>();
         NetworkClient.UnregisterHandler<NodeUpdateMessage>();
         NetworkClient.UnregisterHandler<DirectedEdgeMessage>();
+        NetworkClient.UnregisterHandler<GameOverMessage>();
     }
 
     void OnGraphMessage(GraphMessage msg)
@@ -217,5 +229,13 @@ public class ClientScoreHandler : MonoBehaviour
         lr2.sortingOrder = -1;
 
         directedEdgeObjects.Add(go);
+    }
+
+    void OnGameOverMessage(GameOverMessage msg)
+    {
+        Debug.Log($"[ClientScoreHandler] Game Over received: isWinner={msg.isWinner}, winnerOwnerId={msg.winnerOwnerId}");
+        
+        // Notify all listeners
+        OnGameOver?.Invoke(msg);
     }
 }

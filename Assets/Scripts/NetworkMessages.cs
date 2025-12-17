@@ -134,3 +134,9 @@ public struct PurchaseResultMessage : NetworkMessage
     public string reason; // optional human text: "not enough gold", etc.
     public int newGold;   // player's new gold after purchase (if success)
 }
+
+public struct GameOverMessage : NetworkMessage
+{
+    public bool isWinner; // true if this player won, false if lost
+    public byte winnerOwnerId; // 1 or 2, who won the game
+}

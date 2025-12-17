@@ -15,11 +15,14 @@ public class PurchaseController : MonoBehaviour
 
     private bool inPurchaseMode = false;
     private int? firstNode = null;
+    private bool gameEnded = false;
 
     void Awake()
     {
         // регистрируем handler для ответа сервера о покупке
         NetworkClient.RegisterHandler<PurchaseResultMessage>(OnPurchaseResultMessage, false);
+        // Subscribe to game over event
+        ClientScoreHandler.OnGameOver += OnGameOverMessage;
     }
 
     void Start()
@@ -32,10 +35,22 @@ public class PurchaseController : MonoBehaviour
     {
         if (buyDirectedEdgeButton != null) buyDirectedEdgeButton.onClick.RemoveListener(OnBuyClicked);
         NetworkClient.UnregisterHandler<PurchaseResultMessage>();
+        ClientScoreHandler.OnGameOver -= OnGameOverMessage;
+    }
+
+    private void OnGameOverMessage(GameOverMessage msg)
+    {
+        gameEnded = true;
+        inPurchaseMode = false;
+        firstNode = null;
+        if (buyDirectedEdgeButton != null) buyDirectedEdgeButton.interactable = false;
+        SetInfo("Game Over!");
+        Debug.Log("[PurchaseController] Game ended, purchases disabled.");
     }
 
     void OnBuyClicked()
     {
+        if (gameEnded) return;
         // go into selection mode
         inPurchaseMode = !inPurchaseMode;
         firstNode = null;
@@ -44,7 +59,7 @@ public class PurchaseController : MonoBehaviour
 
     void Update()
     {
-        if (!inPurchaseMode) return;
+        if (!inPurchaseMode || gameEnded) return;
         if (Mouse.current == null) return;
 
         if (Mouse.current.leftButton.wasPressedThisFrame)
