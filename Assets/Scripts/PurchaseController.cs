@@ -1,6 +1,3 @@
-// Assets/Scripts/PurchaseController.cs
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Mirror;
@@ -8,44 +5,95 @@ using UnityEngine.InputSystem;
 using TMPro;
 
 public class PurchaseController : MonoBehaviour
-{
+{ 
+    [Header("Buttons")]
     public Button buyDirectedEdgeButton;
-    public TMP_Text infoText; // optional - show status
-    public int cost = 100;
+    public Button buyTurretButton;
 
-    private bool inPurchaseMode = false;
+    [Header("Button Texts")]
+    public TMP_Text directedEdgeButtonText;
+    public TMP_Text turretButtonText;
+
+    [Header("Costs")]
+    public int directedEdgeCost = 100;
+    public int turretCost = 500;
+
+    [Header("Status Info")]
+    public TMP_Text infoText;
+
+    private bool inDirectedMode = false;
+    private bool inTurretMode = false;
     private int? firstNode = null;
+
+    private string turretButtonOriginalText;
+    private string directedButtonOriginalText;
 
     void Awake()
     {
-        // регистрируем handler для ответа сервера о покупке
-        NetworkClient.RegisterHandler<PurchaseResultMessage>(OnPurchaseResultMessage, false);
-    }
+        NetworkClient.RegisterHandler<PurchaseResultMessage>(OnPurchaseResult, false);
 
-    void Start()
-    {
-        if (buyDirectedEdgeButton != null) buyDirectedEdgeButton.onClick.AddListener(OnBuyClicked);
-        UpdateInfo();
+        if (turretButtonText != null) turretButtonOriginalText = turretButtonText.text;
+        if (directedEdgeButtonText != null) directedButtonOriginalText = directedEdgeButtonText.text;
     }
 
     void OnDestroy()
     {
-        if (buyDirectedEdgeButton != null) buyDirectedEdgeButton.onClick.RemoveListener(OnBuyClicked);
         NetworkClient.UnregisterHandler<PurchaseResultMessage>();
+        OnDestroyUI();
     }
 
-    void OnBuyClicked()
+    void Start()
     {
-        // go into selection mode
-        inPurchaseMode = !inPurchaseMode;
+        if (buyDirectedEdgeButton != null) buyDirectedEdgeButton.onClick.AddListener(OnBuyDirectedClicked);
+        if (buyTurretButton != null) buyTurretButton.onClick.AddListener(OnBuyTurretClicked);
+        UpdateInfo();
+    }
+
+    void OnDestroyUI()
+    {
+        if (buyDirectedEdgeButton != null) buyDirectedEdgeButton.onClick.RemoveListener(OnBuyDirectedClicked);
+        if (buyTurretButton != null) buyTurretButton.onClick.RemoveListener(OnBuyTurretClicked);
+    }
+
+    void OnBuyDirectedClicked()
+    {
+        inDirectedMode = !inDirectedMode;
+        inTurretMode = false;
         firstNode = null;
+
+        // Меняем текст кнопки
+        if (inDirectedMode && directedEdgeButtonText != null)
+            directedEdgeButtonText.text = "Выберите вершину FROM";
+        else if (directedEdgeButtonText != null)
+            directedEdgeButtonText.text = directedButtonOriginalText;
+
+        // Сбрасываем текст турели
+        if (turretButtonText != null) turretButtonText.text = turretButtonOriginalText;
+
+        UpdateInfo();
+    }
+
+    void OnBuyTurretClicked()
+    {
+        inTurretMode = !inTurretMode;
+        inDirectedMode = false;
+        firstNode = null;
+
+        // Меняем текст кнопки
+        if (inTurretMode && turretButtonText != null)
+            turretButtonText.text = "Выберите вершину";
+        else if (turretButtonText != null)
+            turretButtonText.text = turretButtonOriginalText;
+
+        // Сбрасываем текст направленного ребра
+        if (directedEdgeButtonText != null) directedEdgeButtonText.text = directedButtonOriginalText;
+
         UpdateInfo();
     }
 
     void Update()
     {
-        if (!inPurchaseMode) return;
-        if (Mouse.current == null) return;
+        if ((!inDirectedMode && !inTurretMode) || Mouse.current == null) return;
 
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
@@ -56,29 +104,40 @@ public class PurchaseController : MonoBehaviour
             {
                 var cc = col.GetComponent<CircleController>();
                 if (cc == null) return;
-                if (!firstNode.HasValue)
+
+                if (inDirectedMode)
                 {
-                    firstNode = cc.nodeId;
-                    SetInfo($"Selected FROM: {firstNode}. Now pick TO node.");
-                }
-                else
-                {
-                    int from = firstNode.Value;
-                    int to = cc.nodeId;
-                    // send purchase request message
-                    DirectedEdgePurchaseMessage msg = new DirectedEdgePurchaseMessage { fromNodeId = from, toNodeId = to };
-                    if (NetworkClient.isConnected)
+                    if (!firstNode.HasValue)
                     {
-                        NetworkClient.Send(msg);
-                        SetInfo($"Sent purchase request {from} -> {to} (cost {cost}). Waiting result...");
+                        firstNode = cc.nodeId;
+                        SetInfo($"Selected FROM: {firstNode}. Now pick TO node.");
                     }
                     else
                     {
-                        SetInfo("Not connected");
+                        int from = firstNode.Value;
+                        int to = cc.nodeId;
+                        DirectedEdgePurchaseMessage msg = new DirectedEdgePurchaseMessage { fromNodeId = from, toNodeId = to };
+                        if (NetworkClient.isConnected) NetworkClient.Send(msg);
+                        SetInfo($"Sent directed-edge purchase {from}->{to} (cost {directedEdgeCost}).");
+                        inDirectedMode = false;
+                        firstNode = null;
+
+                        // Сброс текста кнопки
+                        if (directedEdgeButtonText != null) directedEdgeButtonText.text = directedButtonOriginalText;
+                        UpdateInfo();
                     }
-                    // exit purchase mode after attempt
-                    inPurchaseMode = false;
+                }
+                else if (inTurretMode)
+                {
+                    int node = cc.nodeId;
+                    TurretPurchaseMessage msg = new TurretPurchaseMessage { nodeId = node };
+                    if (NetworkClient.isConnected) NetworkClient.Send(msg);
+                    SetInfo($"Sent turret purchase for node {node} (cost {turretCost}).");
+                    inTurretMode = false;
                     firstNode = null;
+
+                    // Меняем текст кнопки на куплено
+                    if (turretButtonText != null) turretButtonText.text = "Куплено";
                     UpdateInfo();
                 }
             }
@@ -88,8 +147,9 @@ public class PurchaseController : MonoBehaviour
     void UpdateInfo()
     {
         if (infoText == null) return;
-        if (inPurchaseMode) infoText.text = "Purchase mode: select FROM node";
-        else infoText.text = "Buy directed edge: click button";
+        if (inDirectedMode) infoText.text = "Directed-edge: select FROM node";
+        else if (inTurretMode) infoText.text = "Turret: select node to build";
+        else infoText.text = "Buy: choose option";
     }
 
     void SetInfo(string s)
@@ -98,39 +158,11 @@ public class PurchaseController : MonoBehaviour
         else Debug.Log(s);
     }
 
-    // Новый: обработчик ответа сервера о результате покупки
-    void OnPurchaseResultMessage(PurchaseResultMessage msg)
+    void OnPurchaseResult(PurchaseResultMessage msg)
     {
-        // Этот метод вызывается в главном потоке (Mirror).
         if (msg.success)
-        {
-            SetInfo($"Purchase successful. Gold: {msg.newGold}");
-        }
+            SetInfo($"Purchase succeeded. Gold left: {msg.newGold}");
         else
-        {
             SetInfo($"Purchase failed: {msg.reason}");
-        }
-
-        // Сервер также шлёт PlayerStatsMessage (в твоём коде UpdateOwnedCountsAndNotify / SendPlayerStatsToConn),
-        // поэтому HUD обновится. Но если хочешь обновить локально haste — можно искать PlayerHUD и обновлять:
-        var hud = FindObjectOfType<PlayerHUD>();
-        if (hud != null)
-        {
-            // Сервер вскоре пришлёт PlayerStatsMessage; если не пришлёт, можно временно показать newGold:
-            if (msg.success && msg.newGold >= 0)
-            {
-                // создаём временный PlayerStatsMessage и передаём в HUD для прямого обновления
-                PlayerStatsMessage p = new PlayerStatsMessage { ownerId = hudBackgroundOwnerId(hud), gold = msg.newGold, ownedNodes = -1 };
-                // Но PlayerHUD ожидает PlayerStatsMessage; чтобы не ломать логику, просто обновим goldText directly if available
-                if (hud.goldText != null) hud.goldText.text = $"Gold: {msg.newGold}";
-            }
-        }
-    }
-
-    // хак: получение ownerId, если нужен — иначе возвращаем 0
-    byte hudBackgroundOwnerId(PlayerHUD hud)
-    {
-        // PlayerHUD хранит свой ownerId приватно; для простоты возвращаем 0
-        return 0;
     }
 }
