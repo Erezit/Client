@@ -4,9 +4,27 @@ using UnityEngine.InputSystem;
 
 public class ClientInputSender : MonoBehaviour
 {
+    private bool gameEnded = false;
+
+    void Awake()
+    {
+        ClientScoreHandler.OnGameOver += OnGameOverMessage;
+    }
+
+    void OnDestroy()
+    {
+        ClientScoreHandler.OnGameOver -= OnGameOverMessage;
+    }
+
+    private void OnGameOverMessage(GameOverMessage msg)
+    {
+        gameEnded = true;
+        Debug.Log("[ClientInputSender] Game ended, clicks disabled.");
+    }
+
     void Update()
     {
-        if (!NetworkClient.isConnected) return;
+        if (!NetworkClient.isConnected || gameEnded) return;
 
         if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
         {
