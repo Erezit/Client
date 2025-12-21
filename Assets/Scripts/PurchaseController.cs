@@ -1,4 +1,3 @@
-// Assets/Scripts/PurchaseController.cs
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,7 +9,7 @@ using TMPro;
 public class PurchaseController : MonoBehaviour
 {
     public Button buyDirectedEdgeButton;
-    public TMP_Text infoText; // optional - show status
+    public TMP_Text infoText;
     public int cost = 100;
 
     private bool inPurchaseMode = false;
@@ -19,9 +18,7 @@ public class PurchaseController : MonoBehaviour
 
     void Awake()
     {
-        // регистрируем handler для ответа сервера о покупке
         NetworkClient.RegisterHandler<PurchaseResultMessage>(OnPurchaseResultMessage, false);
-        // Subscribe to game over event
         ClientScoreHandler.OnGameOver += OnGameOverMessage;
     }
 
@@ -51,7 +48,6 @@ public class PurchaseController : MonoBehaviour
     void OnBuyClicked()
     {
         if (gameEnded) return;
-        // go into selection mode
         inPurchaseMode = !inPurchaseMode;
         firstNode = null;
         UpdateInfo();
@@ -80,7 +76,6 @@ public class PurchaseController : MonoBehaviour
                 {
                     int from = firstNode.Value;
                     int to = cc.nodeId;
-                    // send purchase request message
                     DirectedEdgePurchaseMessage msg = new DirectedEdgePurchaseMessage { fromNodeId = from, toNodeId = to };
                     if (NetworkClient.isConnected)
                     {
@@ -91,7 +86,6 @@ public class PurchaseController : MonoBehaviour
                     {
                         SetInfo("Not connected");
                     }
-                    // exit purchase mode after attempt
                     inPurchaseMode = false;
                     firstNode = null;
                     UpdateInfo();
@@ -113,10 +107,8 @@ public class PurchaseController : MonoBehaviour
         else Debug.Log(s);
     }
 
-    // Новый: обработчик ответа сервера о результате покупки
     void OnPurchaseResultMessage(PurchaseResultMessage msg)
     {
-        // Этот метод вызывается в главном потоке (Mirror).
         if (msg.success)
         {
             SetInfo($"Purchase successful. Gold: {msg.newGold}");
@@ -126,26 +118,19 @@ public class PurchaseController : MonoBehaviour
             SetInfo($"Purchase failed: {msg.reason}");
         }
 
-        // Сервер также шлёт PlayerStatsMessage (в твоём коде UpdateOwnedCountsAndNotify / SendPlayerStatsToConn),
-        // поэтому HUD обновится. Но если хочешь обновить локально haste — можно искать PlayerHUD и обновлять:
         var hud = FindObjectOfType<PlayerHUD>();
         if (hud != null)
         {
-            // Сервер вскоре пришлёт PlayerStatsMessage; если не пришлёт, можно временно показать newGold:
             if (msg.success && msg.newGold >= 0)
             {
-                // создаём временный PlayerStatsMessage и передаём в HUD для прямого обновления
                 PlayerStatsMessage p = new PlayerStatsMessage { ownerId = hudBackgroundOwnerId(hud), gold = msg.newGold, ownedNodes = -1 };
-                // Но PlayerHUD ожидает PlayerStatsMessage; чтобы не ломать логику, просто обновим goldText directly if available
                 if (hud.goldText != null) hud.goldText.text = $"Gold: {msg.newGold}";
             }
         }
     }
 
-    // хак: получение ownerId, если нужен — иначе возвращаем 0
     byte hudBackgroundOwnerId(PlayerHUD hud)
     {
-        // PlayerHUD хранит свой ownerId приватно; для простоты возвращаем 0
         return 0;
     }
 }

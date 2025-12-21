@@ -6,7 +6,7 @@ public class PlayerHUD : MonoBehaviour
 {
     public Text goldText;
     public Text nodesText;
-    public Image backgroundPanel; // optional - tint according to player color
+    public Image backgroundPanel;
     private byte myOwnerId = 0;
 
     void Awake()
@@ -21,11 +21,9 @@ public class PlayerHUD : MonoBehaviour
 
     void OnPlayerStatsMessage(PlayerStatsMessage msg)
     {
-        // first message will tell who you are (ownerId)
         if (myOwnerId == 0)
         {
             myOwnerId = msg.ownerId;
-            // tint background
             if (backgroundPanel != null)
             {
                 if (myOwnerId == 1) backgroundPanel.color = Color.red;
