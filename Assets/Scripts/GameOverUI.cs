@@ -22,7 +22,6 @@ public class GameOverUI : MonoBehaviour
 
     void CreateUI()
     {
-        // Find or create Canvas
         canvas = FindObjectOfType<Canvas>();
         if (canvas == null)
         {
@@ -33,7 +32,6 @@ public class GameOverUI : MonoBehaviour
             canvasObj.AddComponent<GraphicRaycaster>();
         }
 
-        // Create Panel
         gameOverPanel = new GameObject("GameOverPanel");
         gameOverPanel.transform.SetParent(canvas.transform, false);
         
@@ -45,7 +43,6 @@ public class GameOverUI : MonoBehaviour
         Image panelImage = gameOverPanel.AddComponent<Image>();
         panelImage.color = new Color(0, 0, 0, 0.85f);
 
-        // Create Game Over Text
         GameObject textObj = new GameObject("GameOverText");
         textObj.transform.SetParent(gameOverPanel.transform, false);
         
@@ -62,12 +59,10 @@ public class GameOverUI : MonoBehaviour
         gameOverText.color = Color.white;
         gameOverText.text = "GAME OVER";
         
-        // Add outline for better visibility
         Outline outline = textObj.AddComponent<Outline>();
         outline.effectColor = Color.black;
         outline.effectDistance = new Vector2(3, -3);
 
-        // Create Winner Text
         GameObject winnerObj = new GameObject("WinnerText");
         winnerObj.transform.SetParent(gameOverPanel.transform, false);
         
@@ -84,12 +79,10 @@ public class GameOverUI : MonoBehaviour
         winnerText.color = Color.yellow;
         winnerText.text = "";
         
-        // Add outline
         Outline winnerOutline = winnerObj.AddComponent<Outline>();
         winnerOutline.effectColor = Color.black;
         winnerOutline.effectDistance = new Vector2(2, -2);
 
-        // Hide panel initially
         gameOverPanel.SetActive(false);
         
         Debug.Log("[GameOverUI] UI created programmatically");
@@ -102,16 +95,14 @@ public class GameOverUI : MonoBehaviour
 
     private void OnGameOverMessage(GameOverMessage msg)
     {
-        if (gameEnded) return; // prevent multiple calls
+        if (gameEnded) return;
         gameEnded = true;
 
         Debug.Log($"[GameOverUI] Game Over! IsWinner: {msg.isWinner}, WinnerOwnerId: {msg.winnerOwnerId}");
 
-        // Show game over panel
         if (gameOverPanel != null)
             gameOverPanel.SetActive(true);
 
-        // Update text based on result
         if (gameOverText != null)
         {
             if (msg.isWinner)
@@ -126,14 +117,12 @@ public class GameOverUI : MonoBehaviour
             }
         }
 
-        // Show winner info
         if (winnerText != null)
         {
             string winnerColor = msg.winnerOwnerId == 1 ? "RED" : "BLUE";
             winnerText.text = $"Winner: {winnerColor} Player";
         }
 
-        // Start disconnect coroutine
         StartCoroutine(DisconnectAfterDelay());
     }
 
@@ -143,7 +132,6 @@ public class GameOverUI : MonoBehaviour
 
         Debug.Log("[GameOverUI] Disconnecting from server...");
 
-        // Disconnect client from server
         if (NetworkClient.isConnected)
         {
             NetworkManager.singleton.StopClient();
